@@ -1,0 +1,70 @@
+---
+- name: Setup GitHub Actions Runner on macOS ARM
+  hosts: all
+  become: true
+  gather_facts: no
+
+  vars_prompt:
+    - name: "github_account"
+      prompt: "Enter your/organization Github account"
+      private: no
+    - name: "github_repository"
+      prompt: "Enter your/organization Github repository name"
+      private: no
+    - name: "github_runner_token"
+      prompt: "Enter Github runner token (can be found here: https://github.com/ACCOUNT/REPOSITORY/settings/actions/runners/new)"
+      private: yes
+    - name: "runner_name"
+      prompt: "Enter unique runner name"
+      private: no
+
+  vars:
+    runner_version: "2.311.0"
+    runner_arch: "arm64"
+
+  tasks:
+    - name: Install necessary packages
+      homebrew:
+        name: "{{ item }}"
+        state: present
+      with_items:
+        - curl
+
+    - name: Download GitHub Actions Runner
+      get_url:
+        url: "https://github.com/actions/runner/releases/download/v{{ runner_version }}/actions-runner-osx-{{ runner_arch }}-{{ runner_version }}.tar.gz"
+        dest: "/tmp/actions-runner.tar.gz" 
+
+    - name: Create a directory for the GitHub Runner
+      file:
+        path: actions-runner/{{ runner_name }}
+        state: directory
+
+    - name: Prepare unarchive tool
+      shell: |
+        export PATH="/usr/local/opt/gnu-tar/libexec/gnubin:$PATH" 
+        export MANPATH="/usr/local/opt/gnu-tar/libexec/gnuman:$MANPATH"
+
+    - name: Extract GitHub Actions Runner
+      shell: tar xzf /tmp/actions-runner.tar.gz -C actions-runner/{{ runner_name }}
+
+    - name: Configure GitHub Actions Runner
+      shell: >
+        ./config.sh --url https://github.com/{{ github_account }}/{{ github_repository }} 
+        --token {{ github_runner_token }} 
+        --name {{ runner_name }} 
+        --unattended 
+        --replace
+      args:
+        chdir: actions-runner/{{ runner_name }}
+        creates: actions-runner/{{ runner_name }}/.credentials
+
+    - name: Install runner as a service
+      shell: ./svc.sh install
+      args:
+        chdir: actions-runner/{{ runner_name }}
+
+    - name: Start runner service
+      shell: ./svc.sh start
+      args:
+        chdir: actions-runner/{{ runner_name }}

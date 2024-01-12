@@ -1,0 +1,32 @@
+---
+- name: Remove GitHub Actions Runner
+  hosts: all
+  become: true
+  gather_facts: no
+
+  vars_prompt:
+    - name: "runner_name"
+      prompt: "Enter runner name"
+      private: no
+
+  tasks:
+    - name: Uninstall service
+      shell: ./svc.sh uninstall
+      args:
+        chdir: actions-runner/{{ runner_name }}
+    
+    - name: Remove .runner file
+      shell: rm .runner
+      args:
+        chdir: actions-runner/{{ runner_name }}
+
+    - name: Remove Github Actions Runner
+      shell: ./config.sh remove
+      args:
+        chdir: actions-runner/{{ runner_name }}
+    
+    - name: Clean up folders
+      shell: rm -rf {{ runner_name }}
+      args:
+        chdir: actions-runner
+
