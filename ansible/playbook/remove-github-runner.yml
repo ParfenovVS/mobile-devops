@@ -1,32 +1,46 @@
 ---
 - name: Remove GitHub Actions Runner
   hosts: all
-  become: true
-  gather_facts: no
+  gather_facts: false
 
   vars_prompt:
+    - name: "github_repository"
+      prompt: "Enter your/organization Github repository name"
+      private: false
     - name: "runner_name"
       prompt: "Enter runner name"
-      private: no
+      private: false
+  
+  vars:
+    runner_dir: actions-runner/{{ github_repository }}/{{ runner_name }}
+
+  pre_tasks:
+    - name: Check if the directory exists
+      ansible.buildin.stat:
+        path: "{{ runner_dir }}"
+      register: runner_exists
 
   tasks:
     - name: Uninstall service
       shell: ./svc.sh uninstall
       args:
-        chdir: actions-runner/{{ runner_name }}
+        chdir: "{{ runner_dir }}"
+      when: runner_exists.stat.exists
     
     - name: Remove .runner file
       shell: rm .runner
       args:
-        chdir: actions-runner/{{ runner_name }}
+        chdir: "{{ runner_dir }}"
+      when: runner_exists.stat.exists
 
     - name: Remove Github Actions Runner
       shell: ./config.sh remove
       args:
-        chdir: actions-runner/{{ runner_name }}
+        chdir: "{{ runner_dir }}"
+      when: runner_exists.stat.exists
     
     - name: Clean up folders
       shell: rm -rf {{ runner_name }}
       args:
-        chdir: actions-runner
-
+        chdir: "{{ github_repository }}"
+      when: runner_exists.stat.exists
