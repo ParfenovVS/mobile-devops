@@ -21,12 +21,9 @@ func TestGetCurrentBranch(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
-	cmd := exec.Command("git", "checkout", "-b", "test_branch")
-	cmd.Dir = dir
-	cmd.Run()
-	exp := "test_branch"
+	exp := "master"
 
-	branch, err := tagtolibv.GetCurrentBranch(dir)
+	branch, err := tagtolibv.GetCurrentBranch()
 	if err != nil {
 		t.Errorf("failed with %q", err)
 	} else if exp != branch {
@@ -66,7 +63,7 @@ func TestGetTags(t *testing.T) {
 		}
 	}
 
-	tags, err := tagtolibv.GetTags(dir)
+	tags, err := tagtolibv.GetTags()
 	if err != nil {
 		t.Fatalf("cannot get tags: %s", err.Error())
 	}
@@ -80,6 +77,44 @@ func TestGetTags(t *testing.T) {
 		for _, tag := range tags {
 			t.Errorf("%q\n", tag)
 		}
+	}
+}
+
+func TestGetLibVersion(t *testing.T) {
+	defaultWd, _ := os.Getwd()
+	defer os.Chdir(defaultWd)
+
+	dir, err := createTempRepository(".temp_TestGetTags")
+	if err != nil {
+		t.Fatalf("cannot create temp repository: %s", err.Error())
+	}
+	defer os.RemoveAll(dir)
+
+	tomlContent := []byte("[versions]\nlib = \"1.2.3\"")
+	os.Mkdir("gradle", os.ModePerm)
+	os.WriteFile("gradle/libs.versions.toml", tomlContent, 0644)
+
+	cmd := exec.Command("git", "add", "gradle/libs.versions.toml")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("cannot add to git: %s, %s", err.Error(), string(out))
+	}
+	cmd = exec.Command("git", "commit", "-m", "\"add toml file\"")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("cannot commit: %s, %s", err.Error(), string(out))
+	}
+
+	cmd = exec.Command("git", "tag", "v1.0.0")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("cannot create tag v1.0.0: %s, %s", err.Error(), string(out))
+	}
+
+	version, err := tagtolibv.GetLibVersion("v1.0.0", "lib")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if version != "1.2.3" {
+		t.Errorf("expected 1.2.3, got %s instead.", version)
 	}
 }
 
