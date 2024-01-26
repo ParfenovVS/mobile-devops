@@ -42,21 +42,26 @@ type tomlConfig struct {
 }
 
 func GetLibVersion(tag string, lib string) (string, error) {
-	cmd := exec.Command("git", "checkout", tag)
-	if err := cmd.Run(); err != nil {
-		fmt.Fprintln(os.Stderr, fmt.Errorf("cannot checkout tag %s: %s", tag, err.Error()))
-		return "", nil
-	}
+	GitCheckout(tag)
 
 	tomlFile := "gradle/libs.versions.toml"
 	var config tomlConfig
 	_, err := toml.DecodeFile(tomlFile, &config)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		return "", nil
+		return "", err
 	}
 
 	version := config.Versions[lib]
 
 	return version, nil
+}
+
+func GitCheckout(target string) error {
+	cmd := exec.Command("git", "checkout", target)
+	if err := cmd.Run(); err != nil {
+		fmt.Fprintln(os.Stderr, fmt.Errorf("cannot checkout tag %s: %s", target, err.Error()))
+		return err
+	}
+	return nil
 }

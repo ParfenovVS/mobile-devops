@@ -118,6 +118,55 @@ func TestGetLibVersion(t *testing.T) {
 	}
 }
 
+func TestGitCheckout(t *testing.T) {
+	defaultWd, _ := os.Getwd()
+	defer os.Chdir(defaultWd)
+
+	dir, err := createTempRepository(".temp_TestGitCheckout")
+	if err != nil {
+		t.Fatalf("cannot create temp repository: %s", err.Error())
+	}
+	defer os.RemoveAll(dir)
+
+	initialBranch, _ := tagtolibv.GetCurrentBranch()
+
+	os.Create("temp")
+	cmd := exec.Command("git", "add", "temp")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("cannot add to git: %s, %s", err.Error(), string(out))
+	}
+	cmd = exec.Command("git", "commit", "-m", "\"add temp\"")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("cannot commit: %s, %s", err.Error(), string(out))
+	}
+
+	cmd = exec.Command("git", "checkout", "-b", "test_branch")
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("cannot create test_branch: %s", err.Error())
+	}
+	os.Create("temp2")
+	cmd = exec.Command("git", "add", "temp2")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("cannot add to git: %s, %s", err.Error(), string(out))
+	}
+	cmd = exec.Command("git", "commit", "-m", "\"add temp2\"")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("cannot commit: %s, %s", err.Error(), string(out))
+	}
+	cmd = exec.Command("git", "checkout", initialBranch)
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("cannot checkout %s: %s", initialBranch, err.Error())
+	}
+
+	tagtolibv.GitCheckout("test_branch")
+
+	actualBranch, _ := tagtolibv.GetCurrentBranch()
+
+	if actualBranch != "test_branch" {
+		t.Errorf("expected test_branch, got %s instead.", actualBranch)
+	}
+}
+
 func createTempRepository(name string) (string, error) {
 	wd, err := os.Getwd()
 	if err != nil {
