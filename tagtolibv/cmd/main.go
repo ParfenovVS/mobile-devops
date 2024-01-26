@@ -32,8 +32,7 @@ func main() {
 	}
 
 	result := make(map[string]string)
-	for i := len(tags) - 1; i >= 0; i-- {
-		t := tags[i]
+	for _, t := range tags {
 		err := tagtolibv.GitCheckout(t)
 		if err != nil {
 			log.Fatalf("Cannot checkout %s: %s", t, err.Error())
