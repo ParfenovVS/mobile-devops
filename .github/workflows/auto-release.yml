@@ -17,7 +17,7 @@ jobs:
       - name: Build
         run: |
           cd tagtolibv 
-          go build
+          go build -o bin/tagtolibv
       
       - name: Print results
         run: ls -l tagtolibv
